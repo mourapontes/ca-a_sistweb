@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caça-Palavras - Sistema Web</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin-top: 20px;
+      font-size: 1.5rem;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(28px, 1fr));
+      grid-gap: 2px;
+      justify-content: center;
+      margin: 20px auto;
+      max-width: 90vw;
+    }
+    .cell {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: white;
+      border: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .selected {
+      background-color: #ffeaa7;
+    }
+    .found {
+      background-color: #81ecec !important;
+    }
+    .word-list {
+      margin: 10px auto;
+      max-width: 90vw;
+    }
+    .word-list ul {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .word-list li {
+      padding: 5px 10px;
+      background-color: #dfe6e9;
+      border-radius: 4px;
+    }
+    .word-list li.found {
+      text-decoration: line-through;
+      color: green;
+    }
+    #score {
+      font-size: 1rem;
+      margin-top: 10px;
+    }
+    #message {
+      font-size: 1.1rem;
+      color: green;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #restart {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #0984e3;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Caça-Palavras</h1>
+  <h3>Tema: Sistema Web</h3>
+  <div id="score">Pontuação: 0</div>
+  <div id="message"></div>
+  <button id="restart" onclick="restartGame()">Reiniciar</button>
+  <div id="grid"></div>
+  <div class="word-list">
+    <h4>Palavras para encontrar:</h4>
+    <ul id="words">
+      <li>HTML</li>
+      <li>CSS</li>
+      <li>JAVASCRIPT</li>
+      <li>HTTP</li>
+      <li>MYSQL</li>
+      <li>REACT</li>
+      <li>LOGIN</li>
+      <li>API</li>
+      <li>FRONTEND</li>
+      <li>BACKEND</li>
+      <li>FRAMEWORK</li>
+      <li>SERVER</li>
+    </ul>
+  </div>
+
+  <script>
+    const gridContainer = document.getElementById('grid');
+    const wordsList = document.querySelectorAll('#words li');
+    const scoreEl = document.getElementById("score");
+    const messageEl = document.getElementById("message");
+    let words = ["HTML", "CSS", "JAVASCRIPT", "HTTP", "MYSQL", "REACT", "LOGIN", "API", "FRONTEND", "BACKEND", "FRAMEWORK", "SERVER"];
+    const gridSize = 10;
+    let grid = [];
+    let selectedCells = [];
+    let score = 0;
+
+    function generateGrid() {
+      grid = [];
+      for (let i = 0; i < gridSize; i++) {
+        grid[i] = [];
+        for (let j = 0; j < gridSize; j++) {
+          grid[i][j] = '';
+        }
+      }
+
+      words.forEach(word => {
+        let placed = false;
+        while (!placed) {
+          const isHorizontal = Math.random() > 0.5;
+          const maxX = isHorizontal ? gridSize - word.length : gridSize - 1;
+          const maxY = isHorizontal ? gridSize - 1 : gridSize - word.length;
+          const x = Math.floor(Math.random() * (maxX + 1));
+          const y = Math.floor(Math.random() * (maxY + 1));
+
+          let fits = true;
+          for (let i = 0; i < word.length; i++) {
+            const xi = isHorizontal ? x + i : x;
+            const yi = isHorizontal ? y : y + i;
+            if (grid[yi][xi] && grid[yi][xi] !== word[i]) {
+              fits = false;
+              break;
+            }
+          }
+
+          if (fits) {
+            for (let i = 0; i < word.length; i++) {
+              const xi = isHorizontal ? x + i : x;
+              const yi = isHorizontal ? y : y + i;
+              grid[yi][xi] = word[i];
+            }
+            placed = true;
+          }
+        }
+      });
+
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          if (!grid[i][j]) {
+            grid[i][j] = letters[Math.floor(Math.random() * letters.length)];
+          }
+        }
+      }
+    }
+
+    function renderGrid() {
+      gridContainer.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.textContent = grid[y][x];
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.addEventListener('click', () => toggleCell(cell));
+          gridContainer.appendChild(cell);
+        }
+      }
+    }
+
+    function toggleCell(cell) {
+      if (cell.classList.contains('found')) return;
+
+      if (cell.classList.contains('selected')) {
+        cell.classList.remove('selected');
+        selectedCells = selectedCells.filter(c => c !== cell);
+      } else {
+        cell.classList.add('selected');
+        selectedCells.push(cell);
+      }
+
+      checkSelection();
+    }
+
+    function checkSelection() {
+      const word = selectedCells.map(c => c.textContent).join('');
+      const reverse = selectedCells.map(c => c.textContent).reverse().join('');
+      if (words.includes(word) || words.includes(reverse)) {
+        selectedCells.forEach(c => c.classList.remove('selected'));
+        selectedCells.forEach(c => c.classList.add('found'));
+        markWordAsFound(word);
+        selectedCells = [];
+        score++;
+        scoreEl.textContent = `Pontuação: ${score}`;
+        if (score === words.length) {
+          messageEl.textContent = "Parabéns! Você encontrou todas as palavras!";
+        }
+      }
+    }
+
+    function markWordAsFound(word) {
+      const reversed = word.split('').reverse().join('');
+      wordsList.forEach(item => {
+        if (item.textContent === word || item.textContent === reversed) {
+          item.classList.add('found');
+        }
+      });
+    }
+
+    function restartGame() {
+      selectedCells = [];
+      score = 0;
+      scoreEl.textContent = "Pontuação: 0";
+      messageEl.textContent = "";
+      document.querySelectorAll('#words li').forEach(li => li.classList.remove('found'));
+      generateGrid();
+      renderGrid();
+    }
+
+    generateGrid();
+    renderGrid();
+  </script>
+</body>
+</html>
