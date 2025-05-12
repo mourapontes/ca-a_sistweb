@@ -18,22 +18,22 @@
     }
     #grid {
       display: grid;
-      grid-template-columns: repeat(10, minmax(28px, 1fr));
+      grid-template-columns: repeat(10, 1fr);
       grid-gap: 2px;
       justify-content: center;
       margin: 20px auto;
       max-width: 90vw;
     }
     .cell {
-      width: 100%;
-      aspect-ratio: 1 / 1;
+      width: 35px;
+      height: 35px;
       background: white;
       border: 1px solid #333;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 1.2rem;
+      font-size: 1rem;
       cursor: pointer;
       user-select: none;
     }
@@ -84,6 +84,13 @@
       cursor: pointer;
       border-radius: 5px;
     }
+    @media (max-width: 600px) {
+      .cell {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -108,6 +115,16 @@
       <li>BACKEND</li>
       <li>FRAMEWORK</li>
       <li>SERVER</li>
+      <li>NODE</li>
+      <li>DATABASE</li>
+      <li>ANGULAR</li>
+      <li>BOOTSTRAP</li>
+      <li>PYTHON</li>
+      <li>JSON</li>
+      <li>AJAX</li>
+      <li>SESSION</li>
+      <li>COOKIE</li>
+      <li>LINUX</li>
     </ul>
   </div>
 
@@ -116,35 +133,36 @@
     const wordsList = document.querySelectorAll('#words li');
     const scoreEl = document.getElementById("score");
     const messageEl = document.getElementById("message");
-    let words = ["HTML", "CSS", "JAVASCRIPT", "HTTP", "MYSQL", "REACT", "LOGIN", "API", "FRONTEND", "BACKEND", "FRAMEWORK", "SERVER"];
+    let words = Array.from(wordsList).map(li => li.textContent.trim());
     const gridSize = 10;
     let grid = [];
     let selectedCells = [];
     let score = 0;
+    let foundWords = new Set();
 
     function generateGrid() {
-      grid = [];
-      for (let i = 0; i < gridSize; i++) {
-        grid[i] = [];
-        for (let j = 0; j < gridSize; j++) {
-          grid[i][j] = '';
-        }
-      }
+      grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(''));
 
       words.forEach(word => {
         let placed = false;
-        while (!placed) {
-          const isHorizontal = Math.random() > 0.5;
-          const maxX = isHorizontal ? gridSize - word.length : gridSize - 1;
-          const maxY = isHorizontal ? gridSize - 1 : gridSize - word.length;
-          const x = Math.floor(Math.random() * (maxX + 1));
-          const y = Math.floor(Math.random() * (maxY + 1));
+        let attempts = 0;
+        while (!placed && attempts < 100) {
+          attempts++;
+          const directions = [
+            { x: 1, y: 0 }, { x: 0, y: 1 },
+            { x: 1, y: 1 }, { x: -1, y: 0 },
+            { x: 0, y: -1 }, { x: -1, y: -1 },
+            { x: 1, y: -1 }, { x: -1, y: 1 }
+          ];
+          const dir = directions[Math.floor(Math.random() * directions.length)];
+          const xStart = Math.floor(Math.random() * gridSize);
+          const yStart = Math.floor(Math.random() * gridSize);
 
           let fits = true;
           for (let i = 0; i < word.length; i++) {
-            const xi = isHorizontal ? x + i : x;
-            const yi = isHorizontal ? y : y + i;
-            if (grid[yi][xi] && grid[yi][xi] !== word[i]) {
+            const x = xStart + i * dir.x;
+            const y = yStart + i * dir.y;
+            if (x < 0 || x >= gridSize || y < 0 || y >= gridSize || (grid[y][x] && grid[y][x] !== word[i])) {
               fits = false;
               break;
             }
@@ -152,9 +170,9 @@
 
           if (fits) {
             for (let i = 0; i < word.length; i++) {
-              const xi = isHorizontal ? x + i : x;
-              const yi = isHorizontal ? y : y + i;
-              grid[yi][xi] = word[i];
+              const x = xStart + i * dir.x;
+              const y = yStart + i * dir.y;
+              grid[y][x] = word[i];
             }
             placed = true;
           }
@@ -162,10 +180,10 @@
       });
 
       const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-      for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-          if (!grid[i][j]) {
-            grid[i][j] = letters[Math.floor(Math.random() * letters.length)];
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          if (!grid[y][x]) {
+            grid[y][x] = letters[Math.floor(Math.random() * letters.length)];
           }
         }
       }
@@ -202,11 +220,13 @@
 
     function checkSelection() {
       const word = selectedCells.map(c => c.textContent).join('');
-      const reverse = selectedCells.map(c => c.textContent).reverse().join('');
-      if (words.includes(word) || words.includes(reverse)) {
+      const reverse = [...selectedCells].reverse().map(c => c.textContent).join('');
+      if ((words.includes(word) || words.includes(reverse)) && !foundWords.has(word) && !foundWords.has(reverse)) {
         selectedCells.forEach(c => c.classList.remove('selected'));
         selectedCells.forEach(c => c.classList.add('found'));
         markWordAsFound(word);
+        foundWords.add(word);
+        foundWords.add(reverse);
         selectedCells = [];
         score++;
         scoreEl.textContent = `Pontuação: ${score}`;
@@ -219,7 +239,8 @@
     function markWordAsFound(word) {
       const reversed = word.split('').reverse().join('');
       wordsList.forEach(item => {
-        if (item.textContent === word || item.textContent === reversed) {
+        const text = item.textContent.trim();
+        if (text === word || text === reversed) {
           item.classList.add('found');
         }
       });
@@ -228,6 +249,7 @@
     function restartGame() {
       selectedCells = [];
       score = 0;
+      foundWords.clear();
       scoreEl.textContent = "Pontuação: 0";
       messageEl.textContent = "";
       document.querySelectorAll('#words li').forEach(li => li.classList.remove('found'));
